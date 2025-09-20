@@ -1,4 +1,4 @@
-const Product = require("../Model/productModel");
+const Product = require("../model/productmodel");
 
 // ✅ Create product with multiple images
 const Createproduct = async (req, res) => {
