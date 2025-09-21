@@ -17,7 +17,11 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: "https://ukzai.shop",  // frontend domain
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+  credentials: true
+}));
 app.use("/uploads", express.static(uploadDir));
 
 // Routes
