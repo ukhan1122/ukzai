@@ -1,8 +1,5 @@
 const express = require("express");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
+const upload = require("../utils/cloudinary"); // Import your Cloudinary upload
 const {
   Createproduct,
   GetAllProducts,
@@ -13,36 +10,9 @@ const {
 
 const router = express.Router();
 
-// ✅ Ensure uploads folder exists
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.log("✅ Uploads folder created");
-}
+// ✅ Routes - Use Cloudinary upload middleware
 
-// ✅ Multer setup for multiple image uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, cb) => {
-    if (!file.mimetype.startsWith("image/")) {
-      return cb(new Error("Only images are allowed!"), false);
-    }
-    cb(null, true);
-  },
-});
-
-// ✅ Routes
-
-// Create Product (multiple images)
+// Create Product (multiple images) - WITH CLOUDINARY
 router.post("/", upload.array("images", 5), Createproduct);
 
 // Get All Products
@@ -51,7 +21,7 @@ router.get("/", GetAllProducts);
 // Get Single Product by ID
 router.get("/:id", GetProductById);
 
-// Update Product (multiple images)
+// Update Product (multiple images) - WITH CLOUDINARY
 router.put("/:id", upload.array("images", 5), UpdateProduct);
 
 // Delete Product

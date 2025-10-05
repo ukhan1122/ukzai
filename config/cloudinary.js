@@ -9,6 +9,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+console.log("🔹 Cloudinary configured with cloud name:", process.env.CLOUDINARY_CLOUD_NAME);
+
 // 🔹 Multer storage
 const storage = new CloudinaryStorage({
   cloudinary,
