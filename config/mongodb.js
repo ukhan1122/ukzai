@@ -1,14 +1,15 @@
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
-  try {
-    console.log("🔎 MONGO_URI:", process.env.MONGO_URI);
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB Connected");
-  } catch (error) {
-    console.error(`❌ MongoDB connection error: ${error.message}`);
-    process.exit(1);
-  }
+try {
+  await user.save();
+  console.log("✅ User created:", email);
+  res.status(201).json({ message: "User created successfully" });
+} catch (dbError) {
+  console.error("❌ MongoDB save error:", dbError);
+  res.status(500).json({ message: "DB save error", error: dbError.message });
+}
+
 };
 
 module.exports = connectDB;

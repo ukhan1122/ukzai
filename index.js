@@ -10,23 +10,29 @@ const AuthRouter = require("./Router/Authroutes");
 const OrderRoutes = require("./Router/OrderRoutes");
 
 const app = express();
-
 // -------------------
 // ✅ MongoDB Atlas Connection
 // -------------------
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI, {
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      dbName: "ukzaiDB"
     });
+
     console.log("✅ Connected to MongoDB Atlas");
+    console.log("✅ Connected to DB:", conn.connection.name); // logs actual DB name
+
   } catch (err) {
     console.error("❌ MongoDB connection error:", err);
     process.exit(1);
   }
 };
+
+
 connectDB();
+
 
 // -------------------
 // ✅ Uploads Folder
