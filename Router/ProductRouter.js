@@ -1,5 +1,5 @@
 const express = require("express");
-const upload = require("../utils/cloudinary"); // Import your Cloudinary upload
+const upload = require("./../config/cloudinary"); 
 const {
   Createproduct,
   GetAllProducts,
