@@ -45,6 +45,56 @@ const Createproduct = async (req, res) => {
   }
 };
 
+// ✅ ADD THIS MISSING FUNCTION
+const UpdateProduct = async (req, res) => {
+  try {
+    const { name, price, description, stock } = req.body;
+    
+    console.log("🔄 Updating product:", req.params.id);
+    console.log("🖼️ New files received:", req.files ? req.files.length : 0);
+
+    const images = req.files ? req.files.map((file) => {
+      console.log("Update - File path:", file.path);
+      if (!file.path || !file.path.startsWith('http')) {
+        throw new Error(`Invalid image URL: ${file.path}`);
+      }
+      return file.path;
+    }) : undefined;
+
+    const updateData = {
+      name,
+      description,
+      price: Number(price),
+      stock: Number(stock),
+      ...(images && { images }),
+    };
+
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
+
+    if (!updated) {
+      console.log("❌ Product not found:", req.params.id);
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    console.log("✅ Product updated successfully");
+    
+    res.json({
+      message: "✅ Product updated successfully",
+      product: updated,
+    });
+  } catch (error) {
+    console.error("❌ Error updating product:", error);
+    res.status(500).json({
+      message: "Error updating product",
+      error: error.message,
+    });
+  }
+};
+
 // Other controllers (unchanged)
 const GetAllProducts = async (req, res) => {
   try {
@@ -98,7 +148,7 @@ const DeleteProduct = async (req, res) => {
 
 module.exports = {
   Createproduct,
-  UpdateProduct,
+  UpdateProduct, // ✅ Now this exists
   GetAllProducts,
   GetProductById,
   DeleteProduct,
