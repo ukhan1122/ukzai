@@ -1,17 +1,26 @@
 const Product = require("../model/productmodel");
 
-// Create product with Cloudinary images
 const Createproduct = async (req, res) => {
   try {
     const { name, price, description, stock } = req.body;
 
     console.log("📦 Creating product:", { name, price, stock });
-    console.log("🖼️ Files received:", req.files ? req.files.length : 0);
+    console.log("🖼️ Raw files:", req.files);
 
-    // CloudinaryStorage gives full URLs in file.path
-    const images = req.files ? req.files.map((file) => file.path) : [];
+    // Validate and clean Cloudinary URLs
+    const images = req.files ? req.files.map((file) => {
+      console.log("File object:", file);
+      console.log("File path:", file.path);
+      
+      // Ensure the URL is complete
+      if (!file.path || !file.path.startsWith('http')) {
+        throw new Error(`Invalid image URL: ${file.path}`);
+      }
+      
+      return file.path;
+    }) : [];
 
-    console.log("✅ Cloudinary Image URLs:", images);
+    console.log("✅ Clean Cloudinary URLs:", images);
 
     const newProduct = new Product({
       name,
@@ -23,8 +32,6 @@ const Createproduct = async (req, res) => {
 
     await newProduct.save();
     
-    console.log("✅ Product saved to database with ID:", newProduct._id);
-    
     res.status(201).json({
       message: "✅ Product created successfully",
       product: newProduct,
@@ -33,50 +40,6 @@ const Createproduct = async (req, res) => {
     console.error("❌ Error creating product:", error);
     res.status(400).json({
       message: "Error creating product",
-      error: error.message,
-    });
-  }
-};
-
-// Update product with new Cloudinary images
-const UpdateProduct = async (req, res) => {
-  try {
-    const { name, price, description, stock } = req.body;
-    
-    console.log("🔄 Updating product:", req.params.id);
-    console.log("🖼️ New files received:", req.files ? req.files.length : 0);
-
-    const images = req.files ? req.files.map((file) => file.path) : undefined;
-
-    const updateData = {
-      name,
-      description,
-      price: Number(price),
-      stock: Number(stock),
-      ...(images && { images }),
-    };
-
-    const updated = await Product.findByIdAndUpdate(
-      req.params.id,
-      updateData,
-      { new: true }
-    );
-
-    if (!updated) {
-      console.log("❌ Product not found:", req.params.id);
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    console.log("✅ Product updated successfully");
-    
-    res.json({
-      message: "✅ Product updated successfully",
-      product: updated,
-    });
-  } catch (error) {
-    console.error("❌ Error updating product:", error);
-    res.status(500).json({
-      message: "Error updating product",
       error: error.message,
     });
   }

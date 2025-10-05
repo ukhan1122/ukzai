@@ -1,9 +1,7 @@
-// utils/cloudinary.js
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const multer = require("multer");
 
-// 🔹 Cloudinary config from .env
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
@@ -12,17 +10,27 @@ cloudinary.config({
 
 console.log("🔹 Cloudinary configured with cloud name:", process.env.CLOUDINARY_CLOUD_NAME);
 
-// 🔹 Multer storage
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "products", // folder name on Cloudinary
+    folder: "products",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
-    public_id: (req, file) => Date.now() + "-" + file.originalname,
+    public_id: (req, file) => {
+      // Clean filename to avoid issues
+      const timestamp = Date.now();
+      const originalName = file.originalname
+        .replace(/\.[^/.]+$/, "") // Remove extension
+        .replace(/[^a-zA-Z0-9]/g, "-"); // Replace special chars with hyphens
+      return `${timestamp}-${originalName}`;
+    },
   },
 });
 
-// 🔹 Upload middleware
-const upload = multer({ storage });
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  }
+});
 
 module.exports = upload;
