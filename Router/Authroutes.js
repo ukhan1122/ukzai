@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose"); // ADD THIS IMPORT
 const User = require("../model/Authmodel");
 const { authMiddleware, adminMiddleware, jwtSecret } = require("../middleware/auth");
 
@@ -123,6 +124,26 @@ router.get("/debug/users", async (req, res) => {
     });
   } catch (error) {
     console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 🔍 ADD CONNECTION DEBUG ROUTE - ADD THIS NEW ROUTE
+router.get("/debug/connection", async (req, res) => {
+  try {
+    const connection = mongoose.connection;
+    const client = connection.client;
+    
+    res.json({
+      database: connection.db.databaseName,
+      host: connection.host,
+      port: connection.port,
+      cluster: connection.client.s.options.srvHost,
+      connectionString: process.env.MONGO_URI ? 
+        process.env.MONGO_URI.replace(/mongodb\+srv:\/\/([^:]+):[^@]+@/, 'mongodb+srv://username:****@') : 
+        'Not found'
+    });
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
