@@ -15,6 +15,9 @@ const app = express();
 // -------------------
 const connectDB = async () => {
   try {
+    console.log("🔗 Attempting MongoDB connection...");
+    console.log("📝 Connection string:", process.env.MONGO_URI ? "Present" : "Missing");
+    
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
@@ -22,7 +25,13 @@ const connectDB = async () => {
     });
 
     console.log("✅ Connected to MongoDB Atlas");
-    console.log("✅ Connected to DB:", conn.connection.name); // logs actual DB name
+    console.log("✅ Connected to DB:", conn.connection.name);
+    console.log("✅ Host:", conn.connection.host);
+    console.log("✅ Port:", conn.connection.port);
+
+    // Test the connection by listing collections
+    const collections = await conn.connection.db.listCollections().toArray();
+    console.log("📂 Collections in database:", collections.map(c => c.name));
 
   } catch (err) {
     console.error("❌ MongoDB connection error:", err);
@@ -30,9 +39,7 @@ const connectDB = async () => {
   }
 };
 
-
 connectDB();
-
 
 // -------------------
 // ✅ Uploads Folder

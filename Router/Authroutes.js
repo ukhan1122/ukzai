@@ -9,7 +9,7 @@ const router = express.Router();
 // ✅ Signup
 router.post("/signup", async (req, res) => {
   
-  console.log("⚡ Signup route hit"); // <--- add this
+  console.log("⚡ Signup route hit");
   try {
     const { name, email, password, role } = req.body;
     console.log("👉 Signup attempt:", { name, email, role });
@@ -31,15 +31,32 @@ router.post("/signup", async (req, res) => {
     const user = new User({ name, email, password: hashedPassword, role: role || "user" });
     
     // Save user and confirm success
-    await user.save()
-      .then(savedUser => {
-        console.log("✅ User saved in DB:", savedUser);
-        res.status(201).json({ message: "User created successfully", user: savedUser });
-      })
-      .catch(saveErr => {
-        console.error("❌ Error saving user:", saveErr);
-        res.status(500).json({ message: "Error saving user", error: saveErr.message });
-      });
+    const savedUser = await user.save();
+    console.log("✅ User saved in DB:", savedUser);
+
+    // 🔍 ADD VERIFICATION HERE - RIGHT AFTER SAVING
+    console.log("🔍 Starting database verification...");
+    
+    // Verify the user was actually saved by finding them again
+    const verifyUser = await User.findById(savedUser._id);
+    console.log("🔍 Verification - User found in DB:", verifyUser);
+
+    // Count total users in database
+    const userCount = await User.countDocuments();
+    console.log(`📊 Total users in database: ${userCount}`);
+
+    // List all users for debugging
+    const allUsers = await User.find({});
+    console.log("👥 All users in database:", allUsers);
+
+    res.status(201).json({ 
+      message: "User created successfully", 
+      user: savedUser,
+      verification: {
+        verified: !!verifyUser,
+        totalUsers: userCount
+      }
+    });
 
   } catch (err) {
     console.error("❌ Signup error:", err);
@@ -88,6 +105,26 @@ router.post("/login", async (req, res) => {
 router.get("/admin", authMiddleware, adminMiddleware, (req, res) => {
   console.log("👉 Admin route accessed by:", req.user);
   res.json({ message: "Welcome Admin! You can access this route." });
+});
+
+// 🔍 ADD DEBUG ROUTE
+router.get("/debug/users", async (req, res) => {
+  try {
+    const users = await User.find({});
+    const userCount = await User.countDocuments();
+    
+    console.log('🔍 Debug - All users in DB:', users);
+    console.log(`📊 Debug - Total users: ${userCount}`);
+    
+    res.json({
+      database: mongoose.connection.db.databaseName,
+      totalUsers: userCount,
+      users: users
+    });
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
