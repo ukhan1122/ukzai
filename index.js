@@ -48,14 +48,18 @@ const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // -------------------
-// ✅ Middleware
+// ✅ Middleware - MUST BE BEFORE ROUTES
 // -------------------
 app.use(express.json());
 
 // -------------------
-// ✅ Dynamic CORS Setup
+// ✅ FIXED CORS Setup - Add your domain here
 // -------------------
-const allowedOrigins = ["http://localhost:3000", "https://ukzai.shop"];
+const allowedOrigins = [
+  "http://localhost:3000", 
+  "https://ukzai.shop",
+  "https://www.ukzai.shop"
+];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -69,12 +73,14 @@ app.use((req, res, next) => {
   );
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization"
+    "Content-Type, Authorization, x-requested-with"
   );
   res.setHeader("Access-Control-Allow-Credentials", "true");
 
   // Handle preflight requests
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
   next();
 });
@@ -93,6 +99,17 @@ app.use("/api/orders", OrderRoutes);
 // ✅ Test Route
 // -------------------
 app.get("/", (req, res) => res.send("Backend is running..."));
+
+// -------------------
+// ✅ Health Check Route
+// -------------------
+app.get("/health", (req, res) => {
+  res.status(200).json({ 
+    status: "OK", 
+    database: mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
+    timestamp: new Date().toISOString()
+  });
+});
 
 // -------------------
 // ✅ Start Server
