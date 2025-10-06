@@ -51,22 +51,45 @@ const UpdateProduct = async (req, res) => {
     const { name, price, description, stock } = req.body;
     
     console.log("🔄 Updating product:", req.params.id);
+    console.log("📝 Update data:", { name, price, description, stock });
     console.log("🖼️ New files received:", req.files ? req.files.length : 0);
 
-    const images = req.files ? req.files.map((file) => {
-      console.log("Update - File path:", file.path);
-      if (!file.path || !file.path.startsWith('http')) {
-        throw new Error(`Invalid image URL: ${file.path}`);
-      }
-      return file.path;
-    }) : undefined;
+    // Get the existing product first to preserve images
+    const existingProduct = await Product.findById(req.params.id);
+    if (!existingProduct) {
+      console.log("❌ Product not found:", req.params.id);
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    console.log("📸 Existing images:", existingProduct.images);
+
+    // Process new images if provided, otherwise keep existing ones
+    let images = existingProduct.images; // Start with existing images
+    
+    if (req.files && req.files.length > 0) {
+      console.log("🆕 Adding new images to existing ones");
+      const newImages = req.files.map((file) => {
+        console.log("Update - File path:", file.path);
+        if (!file.path || !file.path.startsWith('http')) {
+          throw new Error(`Invalid image URL: ${file.path}`);
+        }
+        return file.path;
+      });
+      
+      // Combine existing images with new images
+      images = [...existingProduct.images, ...newImages];
+    } else {
+      console.log("🔄 No new images, keeping existing ones");
+    }
+
+    console.log("✅ Final images array:", images);
 
     const updateData = {
-      name,
-      description,
-      price: Number(price),
-      stock: Number(stock),
-      ...(images && { images }),
+      name: name || existingProduct.name,
+      description: description || existingProduct.description,
+      price: price ? Number(price) : existingProduct.price,
+      stock: stock ? Number(stock) : existingProduct.stock,
+      images: images, // Always include images
     };
 
     const updated = await Product.findByIdAndUpdate(
@@ -74,11 +97,6 @@ const UpdateProduct = async (req, res) => {
       updateData,
       { new: true }
     );
-
-    if (!updated) {
-      console.log("❌ Product not found:", req.params.id);
-      return res.status(404).json({ message: "Product not found" });
-    }
 
     console.log("✅ Product updated successfully");
     
