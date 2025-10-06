@@ -1,16 +1,19 @@
 const express = require("express");
 const Order = require("../model/OrderModel");
-const Product = require("../model/productmodel"); // ✅ import product model
-const { authMiddleware } = require("../middleware/auth");
+const Product = require("../model/productmodel");
+const { authMiddleware, adminMiddleware } = require("../middleware/auth");
 
 const router = express.Router();
+
+
+console.log("🔹 OrderRoutes.js: File loaded successfully");
 
 // ✅ Create order (user only)
 router.post("/create", authMiddleware, async (req, res) => {
   console.log("👉 /orders/create called by:", req.user);
 
   try {
-    const { items, totalPrice } = req.body;
+    const { items, totalPrice, shippingAddress } = req.body;
 
     // ✅ Extract product IDs from items
     const productIds = items.map((i) => i.productId);
@@ -29,7 +32,7 @@ router.post("/create", authMiddleware, async (req, res) => {
         name: product.name,
         quantity: i.quantity,
         price: product.price,
-        images: product.images, // ✅ copy images into order item
+        images: product.images,
       };
     });
 
@@ -37,6 +40,7 @@ router.post("/create", authMiddleware, async (req, res) => {
       user: req.user.id,
       items: orderItems,
       totalPrice,
+      shippingAddress,
       status: "pending",
     });
 
@@ -56,9 +60,53 @@ router.get("/myorders", authMiddleware, async (req, res) => {
 
   try {
     const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-    res.status(200).json({ orders });
+    res.status(200).json(orders);
   } catch (err) {
     console.error("❌ Error fetching orders:", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ✅ NEW: Get ALL orders (Admin only) - THIS IS THE MISSING ROUTE
+router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
+  console.log("👉 /orders/ called by admin:", req.user);
+
+  try {
+    const orders = await Order.find()
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error("❌ Error fetching all orders:", err.message);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// ✅ NEW: Update order status (Admin only)
+router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
+  console.log("👉 /orders/:id update called by admin:", req.user);
+
+  try {
+    const { status } = req.body;
+    const validStatuses = ["pending", "processing", "completed", "cancelled"];
+    
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const order = await Order.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    ).populate("user", "name email");
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.status(200).json({ message: "Order status updated", order });
+  } catch (err) {
+    console.error("❌ Error updating order:", err.message);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });

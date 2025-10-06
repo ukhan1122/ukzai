@@ -8,11 +8,20 @@ const orderSchema = new mongoose.Schema(
         name: String,
         quantity: Number,
         price: Number,
-        images: { type: [String], default: [] }, // ✅ belongs to each item
+        images: { type: [String], default: [] },
       },
     ],
     totalPrice: { type: Number, required: true },
-    status: { type: String, default: "pending" },
+    shippingAddress: {
+      name: String,
+      email: String,
+      address: String,
+    },
+    status: { 
+      type: String, 
+      default: "pending",
+      enum: ["pending", "processing", "completed", "cancelled"]
+    },
   },
   { timestamps: true }
 );

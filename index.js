@@ -9,6 +9,12 @@ const ProductRouter = require("./Router/ProductRouter");
 const AuthRouter = require("./Router/Authroutes");
 const OrderRoutes = require("./Router/OrderRoutes");
 
+
+
+console.log("✅ Routes registered:");
+console.log("  - /api/product");
+console.log("  - /api/auth"); 
+console.log("  - /api/orders");
 const app = express();
 // -------------------
 // ✅ MongoDB Atlas Connection
