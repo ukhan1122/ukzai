@@ -1,121 +1,67 @@
-// backend/services/whatsappService.js
-const puppeteer = require('puppeteer');
-const qrcode = require('qrcode-terminal');
-const path = require('path');
+// backend/services/whatsappService.js - EXACT CODE
+const axios = require('axios');
 
 class WhatsAppService {
-    constructor() {
-        this.browser = null;
-        this.page = null;
-        this.isConnected = false;
-        this.userDataDir = path.join(__dirname, 'whatsapp_session');
-    }
-
-    async initialize() {
+    async sendOrderNotification(order) {
         try {
-            console.log('🚀 Starting WhatsApp Web...');
+            console.log('📱 Sending Telegram notification...');
             
-            this.browser = await puppeteer.launch({
-                headless: false,
-                userDataDir: this.userDataDir,
-                args: [
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage'
-                ]
-            });
-
-            this.page = await this.browser.newPage();
+            const message = this.formatOrderMessage(order);
+            const success = await this.sendTelegram(message);
             
-            await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
-            
-            console.log('📱 Opening WhatsApp Web...');
-            await this.page.goto('https://web.whatsapp.com', { 
-                waitUntil: 'networkidle2',
-                timeout: 60000
-            });
-
-            // Check if already logged in
-            try {
-                await this.page.waitForSelector('._3OrV6', { timeout: 10000 });
-                console.log('✅ Already logged in to WhatsApp!');
-                this.isConnected = true;
-                return;
-            } catch (e) {
-                console.log('🔐 Need to scan QR code...');
+            if (success) {
+                console.log('✅ Telegram notification sent successfully!');
+                return true;
+            } else {
+                console.log('❌ Telegram failed, logging to console');
+                this.logToConsole(order);
+                return true;
             }
-
-            // Wait for QR code
-            console.log('⏳ Waiting for QR code...');
-            await this.page.waitForSelector('canvas[aria-label="Scan me!"]', { timeout: 30000 });
-            
-            // Get and display QR code
-            const qrCodeData = await this.page.evaluate(() => {
-                const canvas = document.querySelector('canvas[aria-label="Scan me!"]');
-                return canvas ? canvas.toDataURL() : null;
-            });
-
-            if (qrCodeData) {
-                console.log('\n📱 SCAN THIS QR CODE WITH YOUR WHATSAPP:');
-                console.log('1. Open WhatsApp on your phone');
-                console.log('2. Tap Menu → WhatsApp Web');
-                console.log('3. Scan this QR code:\n');
-                qrcode.generate(qrCodeData, { small: true });
-            }
-
-            // Wait for connection
-            console.log('⏳ Waiting for you to scan QR code...');
-            await this.page.waitForSelector('._3OrV6', { timeout: 120000 });
-            
-            this.isConnected = true;
-            console.log('✅ WhatsApp Web connected successfully!');
             
         } catch (error) {
-            console.error('❌ WhatsApp initialization failed:', error.message);
+            console.error('❌ Notification error:', error.message);
+            this.logToConsole(order);
+            return true;
         }
     }
 
-    async sendOrderNotification(order) {
-        if (!this.isConnected) {
-            console.log('🔄 Connecting to WhatsApp...');
-            await this.initialize();
-        }
-
+    async sendTelegram(message) {
         try {
-            const message = this.formatOrderMessage(order);
-            const yourNumber = '923407939853'; // YOUR WHATSAPP NUMBER
-            
-            console.log('💬 Preparing to send WhatsApp message...');
-            
-            const formattedNumber = yourNumber.replace('+', '');
-            
-            await this.page.goto(`https://web.whatsapp.com/send?phone=${formattedNumber}&text=${encodeURIComponent(message)}`, {
-                waitUntil: 'networkidle2',
-                timeout: 30000
-            });
+            const botToken = process.env.TELEGRAM_BOT_TOKEN;
+            const chatId = process.env.TELEGRAM_CHAT_ID;
 
-            console.log('⏳ Waiting for send button...');
-            await this.page.waitForSelector('button[data-tab="11"]', { timeout: 15000 });
-            
-            await this.page.waitForTimeout(3000);
-            
-            await this.page.click('button[data-tab="11"]');
-            console.log('✅ Send button clicked!');
-            
-            await this.page.waitForTimeout(5000);
-            
-            console.log('🎉 WhatsApp message sent successfully!');
+            console.log('🔗 Sending to Telegram...');
+            const response = await axios.post(
+                `https://api.telegram.org/bot${botToken}/sendMessage`,
+                {
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: 'Markdown'
+                },
+                { timeout: 10000 }
+            );
+
+            console.log('✅ Telegram message delivered!');
             return true;
             
         } catch (error) {
-            console.error('❌ Failed to send WhatsApp message:', error.message);
-            this.isConnected = false;
+            console.error('❌ Telegram API error:', error.response?.data || error.message);
             return false;
         }
     }
 
+    logToConsole(order) {
+        console.log('\n📱 ===== ORDER NOTIFICATION =====');
+        console.log(`🆔 Order ID: ${order._id.toString().slice(-6).toUpperCase()}`);
+        console.log(`💰 Amount: Rs. ${order.totalPrice}`);
+        console.log(`👤 Customer: ${order.shippingAddress?.name || 'N/A'}`);
+        console.log(`📞 Phone: ${order.shippingAddress?.phone || 'N/A'}`);
+        console.log(`🏠 Address: ${order.shippingAddress?.address || 'N/A'}`);
+        console.log(`⏰ Time: ${new Date().toLocaleString()}`);
+        console.log('📱 ==============================\n');
+    }
+
     formatOrderMessage(order) {
-        // Extract customer info from shippingAddress
         const customerName = order.shippingAddress?.name || 'N/A';
         const customerPhone = order.shippingAddress?.phone || 'N/A';
         const customerAddress = order.shippingAddress?.address || 'N/A';
@@ -124,28 +70,20 @@ class WhatsAppService {
             `• ${item.name} - Rs. ${item.price} x ${item.quantity}`
         ).join('\n');
 
-        return `🛒 *NEW ORDER - UKZai.shop* 🛒
+        return `🛒 *NEW ORDER - UKZai.shop*
 
 📦 *Order ID:* ${order._id.toString().slice(-6).toUpperCase()}
-💰 *Amount:* Rs. ${order.totalPrice}
+💰 *Total:* Rs. ${order.totalPrice}
 👤 *Customer:* ${customerName}
 📞 *Phone:* ${customerPhone}
 🏠 *Address:* ${customerAddress}
-🕒 *Time:* ${new Date(order.createdAt).toLocaleString()}
+⏰ *Time:* ${new Date(order.createdAt).toLocaleString()}
 
+*📋 Items:*
 ${itemsText}
 
-_Order received at ${new Date().toLocaleTimeString()}_
-
-🔗 View: ukzai.shop/admin`;
-    }
-
-    async close() {
-        if (this.browser) {
-            await this.browser.close();
-        }
+[View in Admin Panel](https://ukzai.shop/admin)`;
     }
 }
 
-const whatsappService = new WhatsAppService();
-module.exports = whatsappService;
+module.exports = new WhatsAppService();
