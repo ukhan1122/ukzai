@@ -1,12 +1,17 @@
-// backend/services/whatsappService.js - EXACT CODE
+// backend/services/whatsappService.js - DEBUG VERSION
 const axios = require('axios');
 
 class WhatsAppService {
     async sendOrderNotification(order) {
+        console.log('🟡 DEBUG: sendOrderNotification CALLED!');
+        console.log('🟡 Order ID:', order._id);
+        console.log('🟡 Customer:', order.shippingAddress?.name);
+        console.log('🟡 Total Price:', order.totalPrice);
+        
         try {
-            console.log('📱 Sending Telegram notification...');
-            
             const message = this.formatOrderMessage(order);
+            console.log('🟡 Formatted message length:', message.length);
+            
             const success = await this.sendTelegram(message);
             
             if (success) {
@@ -20,6 +25,7 @@ class WhatsAppService {
             
         } catch (error) {
             console.error('❌ Notification error:', error.message);
+            console.error('❌ Full error:', error);
             this.logToConsole(order);
             return true;
         }
@@ -27,10 +33,21 @@ class WhatsAppService {
 
     async sendTelegram(message) {
         try {
+            console.log('🟡 DEBUG: sendTelegram called');
+            
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
             const chatId = process.env.TELEGRAM_CHAT_ID;
+            
+            console.log('🟡 Bot Token exists:', !!botToken);
+            console.log('🟡 Chat ID exists:', !!chatId);
+            console.log('🟡 Chat ID:', chatId);
 
-            console.log('🔗 Sending to Telegram...');
+            if (!botToken || !chatId) {
+                console.log('❌ Missing Telegram credentials');
+                return false;
+            }
+
+            console.log('🔗 Sending to Telegram API...');
             const response = await axios.post(
                 `https://api.telegram.org/bot${botToken}/sendMessage`,
                 {
@@ -38,27 +55,37 @@ class WhatsAppService {
                     text: message,
                     parse_mode: 'Markdown'
                 },
-                { timeout: 10000 }
+                { 
+                    timeout: 10000,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }
             );
 
-            console.log('✅ Telegram message delivered!');
+            console.log('✅ Telegram API Response:', response.data);
             return true;
             
         } catch (error) {
-            console.error('❌ Telegram API error:', error.response?.data || error.message);
+            console.error('❌ Telegram API error:');
+            console.error('❌ Error message:', error.message);
+            if (error.response) {
+                console.error('❌ Response status:', error.response.status);
+                console.error('❌ Response data:', error.response.data);
+            }
             return false;
         }
     }
 
     logToConsole(order) {
-        console.log('\n📱 ===== ORDER NOTIFICATION =====');
+        console.log('\n📱 ===== ORDER NOTIFICATION (CONSOLE FALLBACK) =====');
         console.log(`🆔 Order ID: ${order._id.toString().slice(-6).toUpperCase()}`);
         console.log(`💰 Amount: Rs. ${order.totalPrice}`);
         console.log(`👤 Customer: ${order.shippingAddress?.name || 'N/A'}`);
         console.log(`📞 Phone: ${order.shippingAddress?.phone || 'N/A'}`);
         console.log(`🏠 Address: ${order.shippingAddress?.address || 'N/A'}`);
         console.log(`⏰ Time: ${new Date().toLocaleString()}`);
-        console.log('📱 ==============================\n');
+        console.log('📱 =============================================\n');
     }
 
     formatOrderMessage(order) {
