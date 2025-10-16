@@ -48,16 +48,20 @@ router.post("/create", authMiddleware, async (req, res) => {
     });
 
     await order.save();
-    console.log("✅ Order created:", order._id);
+console.log("✅ Order created:", order._id);
 
-    // 🔔 SEND NOTIFICATIONS (don't wait for response)
-    sendOrderNotifications(order)
-      .then(results => {
-        console.log('📢 Notifications sent:', results);
-      })
-      .catch(error => {
-        console.error('⚠️ Notifications failed:', error);
-      });
+// 🔍 DEBUG: Check if WhatsAppService exists
+console.log('🟡 DEBUG: WhatsAppService exists:', !!WhatsAppService);
+console.log('🟡 DEBUG: WhatsAppService methods:', Object.keys(WhatsAppService));
+
+// 🔔 SEND NOTIFICATIONS (don't wait for response)
+sendOrderNotifications(order)
+  .then(results => {
+    console.log('📢 Notifications sent:', results);
+  })
+  .catch(error => {
+    console.error('⚠️ Notifications failed:', error);
+  });
 
     res.status(201).json({ 
       message: "Order created successfully", 
@@ -166,26 +170,45 @@ router.get("/test/notifications", async (req, res) => {
 });
 
 // 🔔 Notification function (added at the bottom)
+// 🔔 FIXED Notification function
 async function sendOrderNotifications(order) {
   console.log('📢 Sending notifications for order:', order._id);
   
   try {
-    // Send both notifications simultaneously
+    console.log('🟡 DEBUG: Calling WhatsAppService...');
+    const whatsappPromise = WhatsAppService.sendOrderNotification(order);
+    
+    console.log('🟡 DEBUG: Calling EmailService...');
+    const emailPromise = EmailService.sendOrderNotification(order);
+
+    // Wait for both with proper error handling
     const [whatsappResult, emailResult] = await Promise.allSettled([
-      WhatsAppService.sendOrderNotification(order),
-      EmailService.sendOrderNotification(order)
+      whatsappPromise,
+      emailPromise
     ]);
+
+    // Log individual results
+    console.log('🟡 WhatsApp result:', whatsappResult);
+    console.log('🟡 Email result:', emailResult);
 
     const results = {
       whatsapp: whatsappResult.status === 'fulfilled' ? whatsappResult.value : false,
       email: emailResult.status === 'fulfilled' ? emailResult.value : false
     };
 
-    console.log('📊 Notification Results:', results);
+    // Log any rejections
+    if (whatsappResult.status === 'rejected') {
+      console.error('❌ WhatsApp notification failed:', whatsappResult.reason);
+    }
+    if (emailResult.status === 'rejected') {
+      console.error('❌ Email notification failed:', emailResult.reason);
+    }
+
+    console.log('📊 Final Notification Results:', results);
     return results;
     
   } catch (error) {
-    console.error('❌ Notification error:', error);
+    console.error('❌ Notification system error:', error);
     return { whatsapp: false, email: false };
   }
 }
