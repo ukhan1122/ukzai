@@ -221,4 +221,35 @@ async function sendOrderNotifications(order) {
   }
 }
 
+
+// 🚨 NUCLEAR TEST ENDPOINT
+router.get("/nuclear-test", async (req, res) => {
+  console.log("💥💥💥 NUCLEAR TEST TRIGGERED 💥💥💥");
+  console.log("💥 Timestamp:", new Date().toISOString());
+  console.log("💥 Environment:", process.env.NODE_ENV);
+  
+  // Test WhatsAppService directly
+  try {
+    const WhatsAppService = require("../services/whatsappService");
+    console.log("💥 WhatsAppService loaded:", !!WhatsAppService);
+    
+    const testOrder = {
+      _id: "nuclear_test_" + Date.now(),
+      totalPrice: 999,
+      shippingAddress: { name: "Nuclear Test" },
+      items: [{ name: "Test Item", price: 999, quantity: 1 }],
+      createdAt: new Date()
+    };
+    
+    console.log("💥 Calling WhatsAppService directly...");
+    const result = await WhatsAppService.sendOrderNotification(testOrder);
+    console.log("💥 WhatsApp result:", result);
+    
+  } catch (error) {
+    console.error("💥 Nuclear test error:", error);
+  }
+  
+  console.log("💥💥💥 NUCLEAR TEST COMPLETE 💥💥💥");
+  res.json({ success: true, message: "Nuclear test completed - CHECK LOGS" });
+});
 module.exports = router;
