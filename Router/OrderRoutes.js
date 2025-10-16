@@ -50,6 +50,11 @@ router.post("/create", authMiddleware, async (req, res) => {
     await order.save();
 console.log("✅ Order created:", order._id);
 
+// 🔍 DEBUG: Check if the function exists and can be called
+console.log("🟡 DEBUG: Checking sendOrderNotifications function");
+console.log("🟡 Function exists:", typeof sendOrderNotifications);
+console.log("🟡 Is function:", typeof sendOrderNotifications === 'function');
+
 // 🔍 DEBUG: Check if WhatsAppService exists
 console.log('🟡 DEBUG: WhatsAppService exists:', !!WhatsAppService);
 console.log('🟡 DEBUG: WhatsAppService methods:', Object.keys(WhatsAppService));
@@ -177,9 +182,12 @@ async function sendOrderNotifications(order) {
   try {
     console.log('🟡 DEBUG: Calling WhatsAppService...');
     const whatsappPromise = WhatsAppService.sendOrderNotification(order);
+        console.log('🟡 DEBUG: WhatsApp promise created');
     
     console.log('🟡 DEBUG: Calling EmailService...');
     const emailPromise = EmailService.sendOrderNotification(order);
+    
+        console.log('🟡 DEBUG: Email promise created');
 
     // Wait for both with proper error handling
     const [whatsappResult, emailResult] = await Promise.allSettled([
