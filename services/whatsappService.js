@@ -106,7 +106,7 @@ class WhatsAppService {
 🏠 *Address:* ${customerAddress}
 📍 City: ${order.shippingAddress?.city || 'N/A'}
 📮 Postal Code: ${order.shippingAddress?.postalCode || 'N/A'}
-⏰ *Time:* ${new Date(order.createdAt).toLocaleString()}
+⏰ *Time:* ${orderTime}
 
 *📋 Items:*
 ${itemsText}
