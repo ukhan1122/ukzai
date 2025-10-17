@@ -104,6 +104,8 @@ class WhatsAppService {
 👤 *Customer:* ${customerName}
 📞 *Phone:* ${customerPhone}
 🏠 *Address:* ${customerAddress}
+📍 City: ${order.shippingAddress?.city || 'N/A'}
+📮 Postal Code: ${order.shippingAddress?.postalCode || 'N/A'}
 ⏰ *Time:* ${new Date(order.createdAt).toLocaleString()}
 
 *📋 Items:*

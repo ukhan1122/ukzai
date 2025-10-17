@@ -14,6 +14,9 @@ router.post("/create", authMiddleware, async (req, res) => {
   try {
     const { items, totalPrice, shippingAddress } = req.body;
 
+    // ✅ Log shipping address to verify all fields
+    console.log("📦 Shipping Address:", shippingAddress);
+
     // ✅ Extract product IDs from items
     const productIds = items.map((i) => i.productId);
 
@@ -39,12 +42,19 @@ router.post("/create", authMiddleware, async (req, res) => {
       user: req.user.id,
       items: orderItems,
       totalPrice,
-      shippingAddress,
+      shippingAddress: {
+        name: shippingAddress.name,
+        email: shippingAddress.email,
+        phone: shippingAddress.phone,
+        address: shippingAddress.address,
+        city: shippingAddress.city, // ✅ City field
+        postalCode: shippingAddress.postalCode // ✅ Postal Code field
+      },
       status: "pending",
     });
 
     await order.save();
-    console.log("✅ Order created:", order._id);
+    console.log("✅ Order created with full address details");
 
     // 🔔 SEND NOTIFICATIONS (don't wait for response)
     sendOrderNotifications(order)
@@ -78,11 +88,11 @@ router.get("/myorders", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Get ALL orders (Admin only) - WITH PHONE FIELD
+// ✅ Get ALL orders (Admin only) - WITH PHONE, CITY, POSTAL CODE
 router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("user", "name email phone") // ✅ Added phone field
+      .populate("user", "name email phone city postalCode") // ✅ Added all fields
       .sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (err) {
@@ -105,7 +115,7 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    ).populate("user", "name email phone"); // ✅ Added phone field
+    ).populate("user", "name email phone city postalCode"); // ✅ Added all fields
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
