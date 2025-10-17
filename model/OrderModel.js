@@ -15,8 +15,10 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       name: String,
       email: String,
-      phone: String, // ✅ ADD THIS LINE
+      phone: String, // ✅ Phone field
       address: String,
+      city: String, // ✅ City field
+      postalCode: String // ✅ Postal Code field
     },
     status: { 
       type: String, 
