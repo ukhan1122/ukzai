@@ -2,14 +2,10 @@ const express = require("express");
 const Order = require("../model/OrderModel");
 const Product = require("../model/productmodel");
 const { authMiddleware, adminMiddleware } = require("../middleware/auth");
-
-// Import notification services
 const WhatsAppService = require("../services/whatsappService");
 const EmailService = require("../services/emailService");
 
 const router = express.Router();
-
-console.log("🔹 OrderRoutes.js: File loaded successfully");
 
 // ✅ Create order (user only) - WITH NOTIFICATIONS
 router.post("/create", authMiddleware, async (req, res) => {
@@ -48,25 +44,16 @@ router.post("/create", authMiddleware, async (req, res) => {
     });
 
     await order.save();
-console.log("✅ Order created:", order._id);
+    console.log("✅ Order created:", order._id);
 
-// 🔍 DEBUG: Check if the function exists and can be called
-console.log("🟡 DEBUG: Checking sendOrderNotifications function");
-console.log("🟡 Function exists:", typeof sendOrderNotifications);
-console.log("🟡 Is function:", typeof sendOrderNotifications === 'function');
-
-// 🔍 DEBUG: Check if WhatsAppService exists
-console.log('🟡 DEBUG: WhatsAppService exists:', !!WhatsAppService);
-console.log('🟡 DEBUG: WhatsAppService methods:', Object.keys(WhatsAppService));
-
-// 🔔 SEND NOTIFICATIONS (don't wait for response)
-sendOrderNotifications(order)
-  .then(results => {
-    console.log('📢 Notifications sent:', results);
-  })
-  .catch(error => {
-    console.error('⚠️ Notifications failed:', error);
-  });
+    // 🔔 SEND NOTIFICATIONS (don't wait for response)
+    sendOrderNotifications(order)
+      .then(results => {
+        console.log('📢 Notifications sent:', results);
+      })
+      .catch(error => {
+        console.error('⚠️ Notifications failed:', error);
+      });
 
     res.status(201).json({ 
       message: "Order created successfully", 
@@ -82,8 +69,6 @@ sendOrderNotifications(order)
 
 // ✅ Get all orders for the logged-in user
 router.get("/myorders", authMiddleware, async (req, res) => {
-  console.log("👉 /orders/myorders called by:", req.user);
-
   try {
     const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json(orders);
@@ -93,13 +78,11 @@ router.get("/myorders", authMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Get ALL orders (Admin only)
+// ✅ Get ALL orders (Admin only) - WITH PHONE FIELD
 router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
-  console.log("👉 /orders/ called by admin:", req.user);
-
   try {
     const orders = await Order.find()
-      .populate("user", "name email")
+      .populate("user", "name email phone") // ✅ Added phone field
       .sort({ createdAt: -1 });
     res.status(200).json(orders);
   } catch (err) {
@@ -110,8 +93,6 @@ router.get("/", authMiddleware, adminMiddleware, async (req, res) => {
 
 // ✅ Update order status (Admin only)
 router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
-  console.log("👉 /orders/:id update called by admin:", req.user);
-
   try {
     const { status } = req.body;
     const validStatuses = ["pending", "processing", "completed", "cancelled"];
@@ -124,7 +105,7 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    ).populate("user", "name email");
+    ).populate("user", "name email phone"); // ✅ Added phone field
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -137,74 +118,21 @@ router.put("/:id", authMiddleware, adminMiddleware, async (req, res) => {
   }
 });
 
-// ✅ Test notifications endpoint (for testing only)
-router.get("/test/notifications", async (req, res) => {
-  try {
-    console.log("🧪 Testing notifications...");
-    
-    const testOrder = {
-      _id: "test_" + Date.now(),
-      totalPrice: 1550,
-      shippingAddress: {
-        name: "Test Customer",
-        phone: "03001234567",
-        address: "Test Address, Islamabad"
-      },
-      items: [
-        { name: "Buldak Hot Chicken Ramen", price: 550, quantity: 2 },
-        { name: "Korean Rice Cakes", price: 450, quantity: 1 }
-      ],
-      createdAt: new Date()
-    };
-
-    const results = await sendOrderNotifications(testOrder);
-    
-    res.json({
-      success: true,
-      message: "Test notifications sent!",
-      results: results
-    });
-    
-  } catch (error) {
-    console.error("❌ Test failed:", error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// 🔔 Notification function (added at the bottom)
-// 🔔 FIXED Notification function
+// 🔔 Notification function
 async function sendOrderNotifications(order) {
   console.log('📢 Sending notifications for order:', order._id);
   
   try {
-    console.log('🟡 DEBUG: Calling WhatsAppService...');
-    const whatsappPromise = WhatsAppService.sendOrderNotification(order);
-        console.log('🟡 DEBUG: WhatsApp promise created');
-    
-    console.log('🟡 DEBUG: Calling EmailService...');
-    const emailPromise = EmailService.sendOrderNotification(order);
-    
-        console.log('🟡 DEBUG: Email promise created');
-
-    // Wait for both with proper error handling
     const [whatsappResult, emailResult] = await Promise.allSettled([
-      whatsappPromise,
-      emailPromise
+      WhatsAppService.sendOrderNotification(order),
+      EmailService.sendOrderNotification(order)
     ]);
-
-    // Log individual results
-    console.log('🟡 WhatsApp result:', whatsappResult);
-    console.log('🟡 Email result:', emailResult);
 
     const results = {
       whatsapp: whatsappResult.status === 'fulfilled' ? whatsappResult.value : false,
       email: emailResult.status === 'fulfilled' ? emailResult.value : false
     };
 
-    // Log any rejections
     if (whatsappResult.status === 'rejected') {
       console.error('❌ WhatsApp notification failed:', whatsappResult.reason);
     }
@@ -221,35 +149,4 @@ async function sendOrderNotifications(order) {
   }
 }
 
-
-// 🚨 NUCLEAR TEST ENDPOINT
-router.get("/nuclear-test", async (req, res) => {
-  console.log("💥💥💥 NUCLEAR TEST TRIGGERED 💥💥💥");
-  console.log("💥 Timestamp:", new Date().toISOString());
-  console.log("💥 Environment:", process.env.NODE_ENV);
-  
-  // Test WhatsAppService directly
-  try {
-    const WhatsAppService = require("../services/whatsappService");
-    console.log("💥 WhatsAppService loaded:", !!WhatsAppService);
-    
-    const testOrder = {
-      _id: "nuclear_test_" + Date.now(),
-      totalPrice: 999,
-      shippingAddress: { name: "Nuclear Test" },
-      items: [{ name: "Test Item", price: 999, quantity: 1 }],
-      createdAt: new Date()
-    };
-    
-    console.log("💥 Calling WhatsAppService directly...");
-    const result = await WhatsAppService.sendOrderNotification(testOrder);
-    console.log("💥 WhatsApp result:", result);
-    
-  } catch (error) {
-    console.error("💥 Nuclear test error:", error);
-  }
-  
-  console.log("💥💥💥 NUCLEAR TEST COMPLETE 💥💥💥");
-  res.json({ success: true, message: "Nuclear test completed - CHECK LOGS" });
-});
 module.exports = router;
