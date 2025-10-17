@@ -15,6 +15,7 @@ const orderSchema = new mongoose.Schema(
     shippingAddress: {
       name: String,
       email: String,
+      phone: String, // ✅ ADD THIS LINE
       address: String,
     },
     status: { 
