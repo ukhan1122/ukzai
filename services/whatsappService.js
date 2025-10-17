@@ -89,15 +89,27 @@ class WhatsAppService {
     }
 
     formatOrderMessage(order) {
-        const customerName = order.shippingAddress?.name || 'N/A';
-        const customerPhone = order.shippingAddress?.phone || 'N/A';
-        const customerAddress = order.shippingAddress?.address || 'N/A';
-        
-        const itemsText = order.items.map(item => 
-            `• ${item.name} - Rs. ${item.price} x ${item.quantity}`
-        ).join('\n');
+    const customerName = order.shippingAddress?.name || 'N/A';
+    const customerPhone = order.shippingAddress?.phone || 'N/A';
+    const customerAddress = order.shippingAddress?.address || 'N/A';
+    
+    const itemsText = order.items.map(item => 
+        `• ${item.name} - Rs. ${item.price} x ${item.quantity}`
+    ).join('\n');
 
-        return `🛒 *NEW ORDER - UKZai.shop*
+    // ✅ FIXED: Define orderTime variable first
+    const orderTime = new Date(order.createdAt).toLocaleString('en-PK', {
+        timeZone: 'Asia/Karachi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+
+    return `🛒 *NEW ORDER - UKZai.shop*
 
 📦 *Order ID:* ${order._id.toString().slice(-6).toUpperCase()}
 💰 *Total:* Rs. ${order.totalPrice}
@@ -112,7 +124,7 @@ class WhatsAppService {
 ${itemsText}
 
 [View in Admin Panel](https://ukzai.shop/admin)`;
-    }
+}
 }
 
 module.exports = new WhatsAppService();
