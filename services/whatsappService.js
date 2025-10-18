@@ -15,7 +15,7 @@ class WhatsAppService {
             const success = await this.sendTelegram(message);
             
             if (success) {
-                console.log('✅ Telegram notification sent successfully!');
+                console.log('✅ Telegram notification sent successfully to all numbers!');
                 return true;
             } else {
                 console.log('❌ Telegram failed, logging to console');
@@ -36,35 +36,53 @@ class WhatsAppService {
             console.log('🟡 DEBUG: sendTelegram called');
             
             const botToken = process.env.TELEGRAM_BOT_TOKEN;
-            const chatId = process.env.TELEGRAM_CHAT_ID;
+            
+            // ✅ MULTIPLE NUMBERS - Add all Chat IDs here
+            const chatIds = [
+                "7610582534",  // Your NEW number
+                "8369649605"   // Your OLD number
+                // Add more numbers: "ANOTHER_CHAT_ID_HERE"
+            ];
             
             console.log('🟡 Bot Token exists:', !!botToken);
-            console.log('🟡 Chat ID exists:', !!chatId);
-            console.log('🟡 Chat ID:', chatId);
+            console.log('🟡 Sending to Chat IDs:', chatIds);
 
-            if (!botToken || !chatId) {
-                console.log('❌ Missing Telegram credentials');
+            if (!botToken) {
+                console.log('❌ Missing Telegram bot token');
                 return false;
             }
 
-            console.log('🔗 Sending to Telegram API...');
-            const response = await axios.post(
-                `https://api.telegram.org/bot${botToken}/sendMessage`,
-                {
-                    chat_id: chatId,
-                    text: message,
-                    parse_mode: 'Markdown'
-                },
-                { 
-                    timeout: 10000,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
+            let allSuccess = true;
 
-            console.log('✅ Telegram API Response:', response.data);
-            return true;
+            // ✅ Send to EACH chat ID
+            for (const chatId of chatIds) {
+                try {
+                    console.log(`📤 Sending to chat ID: ${chatId}`);
+                    
+                    const response = await axios.post(
+                        `https://api.telegram.org/bot${botToken}/sendMessage`,
+                        {
+                            chat_id: chatId,
+                            text: message,
+                            parse_mode: 'Markdown'
+                        },
+                        { 
+                            timeout: 10000,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+
+                    console.log(`✅ Sent successfully to ${chatId}`);
+                    
+                } catch (error) {
+                    console.error(`❌ Failed to send to ${chatId}:`, error.message);
+                    allSuccess = false;
+                }
+            }
+
+            return allSuccess;
             
         } catch (error) {
             console.error('❌ Telegram API error:');
@@ -89,27 +107,27 @@ class WhatsAppService {
     }
 
     formatOrderMessage(order) {
-    const customerName = order.shippingAddress?.name || 'N/A';
-    const customerPhone = order.shippingAddress?.phone || 'N/A';
-    const customerAddress = order.shippingAddress?.address || 'N/A';
-    
-    const itemsText = order.items.map(item => 
-        `• ${item.name} - Rs. ${item.price} x ${item.quantity}`
-    ).join('\n');
+        const customerName = order.shippingAddress?.name || 'N/A';
+        const customerPhone = order.shippingAddress?.phone || 'N/A';
+        const customerAddress = order.shippingAddress?.address || 'N/A';
+        
+        const itemsText = order.items.map(item => 
+            `• ${item.name} - Rs. ${item.price} x ${item.quantity}`
+        ).join('\n');
 
-    // ✅ FIXED: Define orderTime variable first
-    const orderTime = new Date(order.createdAt).toLocaleString('en-PK', {
-        timeZone: 'Asia/Karachi',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
+        // ✅ FIXED: Define orderTime variable first
+        const orderTime = new Date(order.createdAt).toLocaleString('en-PK', {
+            timeZone: 'Asia/Karachi',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
 
-    return `🛒 *NEW ORDER - UKZai.shop*
+        return `🛒 *NEW ORDER - UKZai.shop*
 
 📦 *Order ID:* ${order._id.toString().slice(-6).toUpperCase()}
 💰 *Total:* Rs. ${order.totalPrice}
@@ -124,7 +142,7 @@ class WhatsAppService {
 ${itemsText}
 
 [View in Admin Panel](https://ukzai.shop/admin)`;
-}
+    }
 }
 
 module.exports = new WhatsAppService();
