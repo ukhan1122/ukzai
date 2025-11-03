@@ -45,29 +45,64 @@ const Createproduct = async (req, res) => {
   }
 };
 
-// ✅ ADD THIS MISSING FUNCTION
+// ✅ UPDATED FUNCTION - Now handles image deletion properly
 const UpdateProduct = async (req, res) => {
   try {
-    const { name, price, description, stock } = req.body;
+    let { name, price, description, stock, existingImages, imagesToDelete } = req.body;
     
     console.log("🔄 Updating product:", req.params.id);
     console.log("📝 Update data:", { name, price, description, stock });
-    console.log("🖼️ New files received:", req.files ? req.files.length : 0);
+    console.log("🖼️ Existing images from request:", existingImages);
+    console.log("🗑️ Images to delete:", imagesToDelete);
+    console.log("🆕 New files received:", req.files ? req.files.length : 0);
 
-    // Get the existing product first to preserve images
+    // Parse JSON data if it's sent as string
+    if (typeof existingImages === 'string') {
+      try {
+        existingImages = JSON.parse(existingImages);
+      } catch (e) {
+        console.log("❌ Failed to parse existingImages as JSON");
+      }
+    }
+    
+    if (typeof imagesToDelete === 'string') {
+      try {
+        imagesToDelete = JSON.parse(imagesToDelete);
+      } catch (e) {
+        console.log("❌ Failed to parse imagesToDelete as JSON");
+      }
+    }
+
+    // Get the existing product first
     const existingProduct = await Product.findById(req.params.id);
     if (!existingProduct) {
       console.log("❌ Product not found:", req.params.id);
       return res.status(404).json({ message: "Product not found" });
     }
 
-    console.log("📸 Existing images:", existingProduct.images);
+    console.log("📸 Current images in DB:", existingProduct.images);
 
-    // Process new images if provided, otherwise keep existing ones
-    let images = existingProduct.images; // Start with existing images
-    
+    let finalImages = [];
+
+    // CASE 1: If existingImages is provided, use it (frontend sent specific images to keep)
+    if (existingImages && existingImages.length > 0) {
+      console.log("🔄 Using existingImages from request");
+      finalImages = Array.isArray(existingImages) ? existingImages : [existingImages];
+    } 
+    // CASE 2: If imagesToDelete is provided, remove those images from current images
+    else if (imagesToDelete && imagesToDelete.length > 0) {
+      console.log("🗑️ Removing deleted images from current images");
+      finalImages = existingProduct.images.filter(img => !imagesToDelete.includes(img));
+    }
+    // CASE 3: Otherwise keep all existing images
+    else {
+      console.log("🔄 Keeping all existing images");
+      finalImages = existingProduct.images;
+    }
+
+    // Add new images if provided
     if (req.files && req.files.length > 0) {
-      console.log("🆕 Adding new images to existing ones");
+      console.log("🆕 Adding new images");
       const newImages = req.files.map((file) => {
         console.log("Update - File path:", file.path);
         if (!file.path || !file.path.startsWith('http')) {
@@ -76,20 +111,17 @@ const UpdateProduct = async (req, res) => {
         return file.path;
       });
       
-      // Combine existing images with new images
-      images = [...existingProduct.images, ...newImages];
-    } else {
-      console.log("🔄 No new images, keeping existing ones");
+      finalImages = [...finalImages, ...newImages];
     }
 
-    console.log("✅ Final images array:", images);
+    console.log("✅ Final images array:", finalImages);
 
     const updateData = {
       name: name || existingProduct.name,
       description: description || existingProduct.description,
       price: price ? Number(price) : existingProduct.price,
       stock: stock ? Number(stock) : existingProduct.stock,
-      images: images, // Always include images
+      images: finalImages, // Use the processed images array
     };
 
     const updated = await Product.findByIdAndUpdate(
@@ -99,6 +131,7 @@ const UpdateProduct = async (req, res) => {
     );
 
     console.log("✅ Product updated successfully");
+    console.log("📸 Updated product images:", updated.images);
     
     res.json({
       message: "✅ Product updated successfully",
@@ -166,7 +199,7 @@ const DeleteProduct = async (req, res) => {
 
 module.exports = {
   Createproduct,
-  UpdateProduct, // ✅ Now this exists
+  UpdateProduct,
   GetAllProducts,
   GetProductById,
   DeleteProduct,
