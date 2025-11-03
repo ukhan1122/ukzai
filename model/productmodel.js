@@ -7,7 +7,7 @@ const productSchema = new mongoose.Schema(
     price: { type: Number, required: true },
     stock: { type: Number, default: 1 },
     images: [{ type: String }], // ✅ multiple images
-    imagePrices: { type: Map, of: Number, default: {} } // ✅ NEW: Individual prices for each image
+    imagePrices: { type: Object, default: {} } // ✅ CHANGED: Use Object instead of Map
   },
   { timestamps: true }
 );

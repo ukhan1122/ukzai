@@ -52,7 +52,7 @@ const Createproduct = async (req, res) => {
   }
 };
 
-// UPDATED FUNCTION - Now handles image prices and deletion properly
+// UPDATED FUNCTION - Fixed Map issue
 const UpdateProduct = async (req, res) => {
   try {
     let { name, price, description, stock, existingImages, imagesToDelete, imagePrices } = req.body;
@@ -181,7 +181,7 @@ const UpdateProduct = async (req, res) => {
       price: price ? Number(price) : existingProduct.price,
       stock: stock ? Number(stock) : existingProduct.stock,
       images: finalImages,
-      imagePrices: finalImagePrices
+      imagePrices: finalImagePrices // ✅ Now using Object instead of Map
     };
 
     const updated = await Product.findByIdAndUpdate(
@@ -207,7 +207,7 @@ const UpdateProduct = async (req, res) => {
   }
 };
 
-// Other controllers
+// Other controllers remain the same...
 const GetAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
