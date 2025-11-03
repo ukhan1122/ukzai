@@ -22,12 +22,19 @@ const Createproduct = async (req, res) => {
 
     console.log("✅ Clean Cloudinary URLs:", images);
 
+    // Create initial imagePrices with main price for all images
+    const imagePrices = {};
+    images.forEach(img => {
+      imagePrices[img] = Number(price); // Set main price for all images initially
+    });
+
     const newProduct = new Product({
       name,
       description,
       price: Number(price),
       stock: Number(stock),
       images,
+      imagePrices // ✅ NEW: Include image prices
     });
 
     await newProduct.save();
@@ -45,15 +52,16 @@ const Createproduct = async (req, res) => {
   }
 };
 
-// ✅ UPDATED FUNCTION - Now handles image deletion properly
+// ✅ UPDATED FUNCTION - Now handles image prices and deletion properly
 const UpdateProduct = async (req, res) => {
   try {
-    let { name, price, description, stock, existingImages, imagesToDelete } = req.body;
+    let { name, price, description, stock, existingImages, imagesToDelete, imagePrices } = req.body;
     
     console.log("🔄 Updating product:", req.params.id);
     console.log("📝 Update data:", { name, price, description, stock });
     console.log("🖼️ Existing images from request:", existingImages);
     console.log("🗑️ Images to delete:", imagesToDelete);
+    console.log("💰 Image prices:", imagePrices);
     console.log("🆕 New files received:", req.files ? req.files.length : 0);
 
     // Parse JSON data if it's sent as string
@@ -73,6 +81,14 @@ const UpdateProduct = async (req, res) => {
       }
     }
 
+    if (typeof imagePrices === 'string') {
+      try {
+        imagePrices = JSON.parse(imagePrices);
+      } catch (e) {
+        console.log("❌ Failed to parse imagePrices as JSON");
+      }
+    }
+
     // Get the existing product first
     const existingProduct = await Product.findById(req.params.id);
     if (!existingProduct) {
@@ -81,23 +97,46 @@ const UpdateProduct = async (req, res) => {
     }
 
     console.log("📸 Current images in DB:", existingProduct.images);
+    console.log("💰 Current image prices in DB:", existingProduct.imagePrices);
 
     let finalImages = [];
+    let finalImagePrices = { ...existingProduct.imagePrices }; // Start with existing prices
 
     // CASE 1: If existingImages is provided, use it (frontend sent specific images to keep)
     if (existingImages && existingImages.length > 0) {
       console.log("🔄 Using existingImages from request");
       finalImages = Array.isArray(existingImages) ? existingImages : [existingImages];
+      
+      // Filter imagePrices to only include existing images
+      finalImagePrices = {};
+      existingImages.forEach(img => {
+        if (existingProduct.imagePrices && existingProduct.imagePrices[img]) {
+          finalImagePrices[img] = existingProduct.imagePrices[img];
+        } else {
+          finalImagePrices[img] = Number(price); // Use main price as default
+        }
+      });
     } 
     // CASE 2: If imagesToDelete is provided, remove those images from current images
     else if (imagesToDelete && imagesToDelete.length > 0) {
       console.log("🗑️ Removing deleted images from current images");
       finalImages = existingProduct.images.filter(img => !imagesToDelete.includes(img));
+      
+      // Remove prices for deleted images
+      finalImagePrices = {};
+      finalImages.forEach(img => {
+        if (existingProduct.imagePrices && existingProduct.imagePrices[img]) {
+          finalImagePrices[img] = existingProduct.imagePrices[img];
+        } else {
+          finalImagePrices[img] = Number(price); // Use main price as default
+        }
+      });
     }
     // CASE 3: Otherwise keep all existing images
     else {
       console.log("🔄 Keeping all existing images");
       finalImages = existingProduct.images;
+      finalImagePrices = existingProduct.imagePrices || {};
     }
 
     // Add new images if provided
@@ -111,10 +150,27 @@ const UpdateProduct = async (req, res) => {
         return file.path;
       });
       
+      // Add new images to final array
       finalImages = [...finalImages, ...newImages];
+      
+      // Set prices for new images (use main price as default)
+      newImages.forEach(img => {
+        finalImagePrices[img] = Number(price);
+      });
+    }
+
+    // Update with new image prices from request
+    if (imagePrices && typeof imagePrices === 'object') {
+      console.log("💰 Updating image prices from request");
+      Object.keys(imagePrices).forEach(img => {
+        if (finalImages.includes(img)) { // Only update prices for images that exist
+          finalImagePrices[img] = Number(imagePrices[img]);
+        }
+      });
     }
 
     console.log("✅ Final images array:", finalImages);
+    console.log("💰 Final image prices:", finalImagePrices);
 
     const updateData = {
       name: name || existingProduct.name,
@@ -122,6 +178,7 @@ const UpdateProduct = async (req, res) => {
       price: price ? Number(price) : existingProduct.price,
       stock: stock ? Number(stock) : existingProduct.stock,
       images: finalImages, // Use the processed images array
+      imagePrices: finalImagePrices // ✅ NEW: Include updated image prices
     };
 
     const updated = await Product.findByIdAndUpdate(
@@ -132,6 +189,7 @@ const UpdateProduct = async (req, res) => {
 
     console.log("✅ Product updated successfully");
     console.log("📸 Updated product images:", updated.images);
+    console.log("💰 Updated product image prices:", updated.imagePrices);
     
     res.json({
       message: "✅ Product updated successfully",
