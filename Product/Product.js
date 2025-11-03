@@ -34,7 +34,7 @@ const Createproduct = async (req, res) => {
       price: Number(price),
       stock: Number(stock),
       images,
-      imagePrices // ✅ NEW: Include image prices
+      imagePrices // Include image prices
     });
 
     await newProduct.save();
@@ -52,7 +52,7 @@ const Createproduct = async (req, res) => {
   }
 };
 
-// ✅ UPDATED FUNCTION - Now handles image prices and deletion properly
+// UPDATED FUNCTION - Now handles image prices and deletion properly
 const UpdateProduct = async (req, res) => {
   try {
     let { name, price, description, stock, existingImages, imagesToDelete, imagePrices } = req.body;
@@ -70,6 +70,7 @@ const UpdateProduct = async (req, res) => {
         existingImages = JSON.parse(existingImages);
       } catch (e) {
         console.log("❌ Failed to parse existingImages as JSON");
+        existingImages = [];
       }
     }
     
@@ -78,6 +79,7 @@ const UpdateProduct = async (req, res) => {
         imagesToDelete = JSON.parse(imagesToDelete);
       } catch (e) {
         console.log("❌ Failed to parse imagesToDelete as JSON");
+        imagesToDelete = [];
       }
     }
 
@@ -86,6 +88,7 @@ const UpdateProduct = async (req, res) => {
         imagePrices = JSON.parse(imagePrices);
       } catch (e) {
         console.log("❌ Failed to parse imagePrices as JSON");
+        imagePrices = {};
       }
     }
 
@@ -100,7 +103,7 @@ const UpdateProduct = async (req, res) => {
     console.log("💰 Current image prices in DB:", existingProduct.imagePrices);
 
     let finalImages = [];
-    let finalImagePrices = { ...existingProduct.imagePrices }; // Start with existing prices
+    let finalImagePrices = { ...(existingProduct.imagePrices || {}) }; // Start with existing prices
 
     // CASE 1: If existingImages is provided, use it (frontend sent specific images to keep)
     if (existingImages && existingImages.length > 0) {
@@ -110,8 +113,8 @@ const UpdateProduct = async (req, res) => {
       // Filter imagePrices to only include existing images
       finalImagePrices = {};
       existingImages.forEach(img => {
-        if (existingProduct.imagePrices && existingProduct.imagePrices[img]) {
-          finalImagePrices[img] = existingProduct.imagePrices[img];
+        if (existingProduct.imagePrices && existingProduct.imagePrices[img] !== undefined) {
+          finalImagePrices[img] = Number(existingProduct.imagePrices[img]);
         } else {
           finalImagePrices[img] = Number(price); // Use main price as default
         }
@@ -125,8 +128,8 @@ const UpdateProduct = async (req, res) => {
       // Remove prices for deleted images
       finalImagePrices = {};
       finalImages.forEach(img => {
-        if (existingProduct.imagePrices && existingProduct.imagePrices[img]) {
-          finalImagePrices[img] = existingProduct.imagePrices[img];
+        if (existingProduct.imagePrices && existingProduct.imagePrices[img] !== undefined) {
+          finalImagePrices[img] = Number(existingProduct.imagePrices[img]);
         } else {
           finalImagePrices[img] = Number(price); // Use main price as default
         }
@@ -159,12 +162,12 @@ const UpdateProduct = async (req, res) => {
       });
     }
 
-    // Update with new image prices from request
+    // Update with new image prices from request - ensure all are numbers
     if (imagePrices && typeof imagePrices === 'object') {
       console.log("💰 Updating image prices from request");
       Object.keys(imagePrices).forEach(img => {
         if (finalImages.includes(img)) { // Only update prices for images that exist
-          finalImagePrices[img] = Number(imagePrices[img]);
+          finalImagePrices[img] = Number(imagePrices[img]); // Convert to number
         }
       });
     }
@@ -177,8 +180,8 @@ const UpdateProduct = async (req, res) => {
       description: description || existingProduct.description,
       price: price ? Number(price) : existingProduct.price,
       stock: stock ? Number(stock) : existingProduct.stock,
-      images: finalImages, // Use the processed images array
-      imagePrices: finalImagePrices // ✅ NEW: Include updated image prices
+      images: finalImages,
+      imagePrices: finalImagePrices
     };
 
     const updated = await Product.findByIdAndUpdate(
@@ -204,7 +207,7 @@ const UpdateProduct = async (req, res) => {
   }
 };
 
-// Other controllers (unchanged)
+// Other controllers
 const GetAllProducts = async (req, res) => {
   try {
     const products = await Product.find();
