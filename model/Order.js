@@ -5,25 +5,25 @@ const orderSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     items: [
       {
-        name: String,
+        name:     String,
         quantity: Number,
-        price: Number,
-        images: { type: [String], default: [] },
+        price:    Number,
+        images:   { type: [String], default: [] },
       },
     ],
     totalPrice: { type: Number, required: true },
     shippingAddress: {
-      name: String,
-      email: String,
-      phone: String, // ✅ Phone field
-      address: String,
-      city: String, // ✅ City field
-      postalCode: String // ✅ Postal Code field
+      name:       String,
+      email:      String,
+      phone:      String,
+      address:    String,
+      city:       String,
+      postalCode: String,
     },
-    status: { 
-      type: String, 
+    status: {
+      type:    String,
       default: "pending",
-      enum: ["pending", "processing", "completed", "cancelled"]
+      enum:    ["pending", "processing", "completed", "cancelled"],
     },
   },
   { timestamps: true }
