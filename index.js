@@ -7,9 +7,9 @@ const mongoose = require("mongoose");
 const path = require("path");
 const fs = require("fs");
  
-const productRoutes = require("./routes/productRoutes");
-const authRoutes    = require("./routes/authRoutes");
-const orderRoutes   = require("./routes/orderRoutes");
+const productRoutes = require('./routes/Productroutes');
+const authRoutes = require('./routes/Authroutes');
+const orderRoutes = require('./routes/Orderroutes');
  
 const app  = express();
 const PORT = process.env.PORT || 5000;
