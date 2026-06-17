@@ -47,6 +47,8 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "https://ukzai.shop",
   "https://www.ukzai.shop",
+  "https://ukzaiclient.vercel.app",      // ← ADDED
+  "https://ukzaiclient.vercel.app/*",    // ← ADDED (just in case)
 ];
  
 app.use((req, res, next) => {
